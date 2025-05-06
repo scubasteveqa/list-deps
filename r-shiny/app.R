@@ -2,7 +2,6 @@ library(shiny)
 library(ggplot2)
 library(naniar)
 library(bslib)
-library(DT)
 
 # Define UI for application
 ui <- page_sidebar(
@@ -23,7 +22,7 @@ ui <- page_sidebar(
   
   card(
     card_header("Installed Packages"),
-    DTOutput("packageTable")
+    uiOutput("packageList")
   )
 )
 
@@ -43,24 +42,27 @@ server <- function(input, output) {
     gg_miss_var(data)
   })
   
-  # Get installed packages and display in a table
-  output$packageTable <- renderDT({
+  # Get installed packages and display as text
+  output$packageList <- renderUI({
     if (input$showAllPackages) {
       # Show all installed packages
-      installed_pkgs <- as.data.frame(installed.packages()[, c("Package", "Version", "LibPath")])
+      installed_pkgs <- installed.packages()[, c("Package", "Version")]
     } else {
       # Show only the specified packages
-      default_packages <- c("shiny", "ggplot2", "naniar", "DT", "bslib")
+      default_packages <- c("shiny", "ggplot2", "naniar", "bslib")
       all_pkgs <- installed.packages()
-      installed_pkgs <- as.data.frame(all_pkgs[all_pkgs[, "Package"] %in% default_packages, c("Package", "Version", "LibPath")])
+      installed_pkgs <- all_pkgs[all_pkgs[, "Package"] %in% default_packages, c("Package", "Version")]
     }
     
-    datatable(installed_pkgs, 
-              options = list(pageLength = 10, 
-                             autoWidth = TRUE,
-                             scrollX = TRUE),
-              filter = 'top',
-              rownames = FALSE)
+    # Convert to list of HTML elements
+    package_lines <- apply(installed_pkgs, 1, function(row) {
+      p(paste(row["Package"], row["Version"]))
+    })
+    
+    # Return a div containing all package lines
+    div(
+      package_lines
+    )
   })
 }
 
